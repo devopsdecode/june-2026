@@ -3,15 +3,16 @@ name: External Integration
 on:
   push:
     branches:
-      -  main
+      - main
 
 jobs:
   external-notification:
     runs-on: ubuntu-latest
 
-  steps:
-    - name: Notifcation via curl base request
-      run: curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"text":"Hello from GitHub Actions! from Raj 🚀"}' \
-  "${{ secret.WEBHOOK }}"
+    steps:
+      - name: Notification via curl request
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"text":"Hello from GitHub Actions! From Raj 🚀"}' \
+            "${{ secrets.WEBHOOK }}"
