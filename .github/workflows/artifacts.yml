@@ -25,6 +25,8 @@ jobs:
       steps:
         - name: Download the artifacts
           uses: actions/download-artifact@v4
+          with:
+            name: application-artifact
 
         - name: Test the download
           run: cat app.js
