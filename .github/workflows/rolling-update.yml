@@ -1,7 +1,7 @@
 name: Deploying application using rolling update
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
