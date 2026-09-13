@@ -128,19 +128,17 @@ Open your browser to:
 The `.github/workflows/cicd.yml` workflow automatically runs on every `push` and `pull_request` to `main` / `master` and on tags (`v*.*.*`):
 
 1. **Stage 1: Build & Test (`build-and-test`)**
-   - Sets up .NET 8 SDK.
-   - Caches NuGet dependencies for fast builds.
-   - Restores and compiles the complete solution in `Release` configuration.
-   - Executes xUnit tests with code coverage collection.
-   - Uploads TRX test result artifacts.
+   - Sets up .NET 8 SDK and caches NuGet packages.
+   - Compiles solution in `Release` mode and executes xUnit tests with code coverage.
+   - Uploads TRX test results artifact.
 2. **Stage 2: Package Release (`package-and-publish`)**
-   - Runs `dotnet publish` to create optimized, standalone binaries.
-   - Packages and uploads publish artifacts (`dist/publish`).
-3. **Stage 3: Containerize & Push to Docker Hub (`docker-build-and-push`)**
-   - Configures Docker Buildx and QEMU.
-   - Extracts semantic versioning, git SHA, and branch tags.
-   - Securely logs into Docker Hub using repository secrets.
-   - Builds multi-stage container and pushes to Docker Hub with layer caching (`gha`).
+   - Runs `dotnet publish` to build standalone binaries and uploads package artifacts.
+3. **Stage 3: Container Security Scan (`docker-security-scan`)**
+   - Builds local container image and scans for vulnerabilities (`CRITICAL, HIGH, MEDIUM`) using **Aqua Security Trivy**.
+   - Outputs scan results table and generates SARIF security reports uploaded as artifacts.
+4. **Stage 4: Containerize & Push to Docker Hub (`docker-build-and-push`)**
+   - Authenticates with Docker Hub using PAT and Username.
+   - Builds multi-stage container and pushes tagged images (`latest`, `sha-*`, branch, semver) to Docker Hub.
 
 ### Configuring Docker Hub Secrets in GitHub
 

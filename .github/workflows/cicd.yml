@@ -102,12 +102,62 @@ jobs:
           retention-days: 14
 
   # ============================================================================
-  # Stage 3: Containerize & Push to Docker Hub (Using PAT and Username)
+  # Stage 3: Container Security Scan using Trivy
+  # ============================================================================
+  docker-security-scan:
+    name: Security Scan Container (Trivy)
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Local Container Image for Scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          target: final
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:security-scan
+
+      - name: Run Trivy Vulnerability Scanner (Table Output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE_NAME }}:security-scan'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Generate Trivy SARIF Security Report
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.IMAGE_NAME }}:security-scan'
+          format: 'sarif'
+          output: 'trivy-security-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy Security Report Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-security-report
+          path: trivy-security-results.sarif
+          retention-days: 14
+
+  # ============================================================================
+  # Stage 4: Containerize & Push to Docker Hub (Using PAT and Username)
   # ============================================================================
   docker-build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: [build-and-test, package-and-publish]
+    needs: [build-and-test, package-and-publish, docker-security-scan]
 
     steps:
       - name: Checkout Source Code
@@ -152,6 +202,6 @@ jobs:
       - name: Docker Deployment Summary
         run: |
           echo "======================================================="
-          echo "Successfully pushed container image to Docker Hub!"
+          echo "Successfully pushed scanned container image to Docker Hub!"
           echo "Image Tags: ${{ steps.meta.outputs.tags }}"
           echo "======================================================="
