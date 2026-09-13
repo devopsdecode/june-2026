@@ -1,9 +1,7 @@
 name: Deploying application using rolling update
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   deploy:

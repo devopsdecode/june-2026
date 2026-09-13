@@ -1,9 +1,7 @@
 name: External Integration
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   external-notification:

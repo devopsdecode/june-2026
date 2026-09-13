@@ -1,9 +1,7 @@
 name: Artifacts upload pipeline
 
 on:
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -30,6 +28,3 @@ jobs:
 
         - name: Test the download
           run: cat app.js
-          
-
-      
