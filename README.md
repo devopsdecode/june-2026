@@ -140,12 +140,46 @@ The `.github/workflows/cicd.yml` workflow automatically runs on every `push` and
    - Authenticates with Docker Hub using PAT and Username.
    - Builds multi-stage container and pushes tagged images (`latest`, `sha-*`, branch, semver) to Docker Hub.
 
-### Configuring Docker Hub Secrets in GitHub
+---
 
-To enable automated pushes to your Docker Hub repository, add these secrets to your GitHub repository (**Settings > Secrets and variables > Actions**):
+## 🏗️ Terraform Infrastructure Pipeline (`infra.yml`)
 
-- `DOCKERHUB_USERNAME`: Your Docker Hub username.
-- `DOCKERHUB_TOKEN`: Your Docker Hub Access Token (or password).
+The [`.github/workflows/infra.yml`](.github/workflows/infra.yml) workflow automates provisioning and managing AWS ECS Fargate infrastructure with Terraform:
+
+- **AWS ECS Cluster & Fargate Tasks**: Highly available container execution.
+- **Application Load Balancer (ALB)**: Public ingress on Port 80 forwarding to container port 8080 with automated `/health` probes.
+- **VPC & Subnets**: Multi-AZ public subnets with Internet Gateway and isolated security groups.
+- **IAM Roles**: `ecsTaskExecutionRole` with `AmazonECSTaskExecutionRolePolicy` and task roles.
+- **CloudWatch Logs**: Centralized container logging (`/ecs/fintech-job-portal`).
+
+### Triggering Terraform in GitHub Actions:
+- Go to **Actions > Terraform Infrastructure Provisioning**.
+- Click **Run workflow** and select action: `apply`, `plan`, or `destroy`.
+
+---
+
+## 🚀 Continuous Deployment to AWS ECS Fargate (`cd.yml`)
+
+The [`.github/workflows/cd.yml`](.github/workflows/cd.yml) pipeline executes automatically whenever `cicd.yml` successfully builds and pushes a new Docker image on `main`:
+
+1. Downloads the active AWS ECS Task Definition.
+2. Injects the newly pushed Docker image tag (`rajnadar/fintech-job-portal:latest` or git SHA).
+3. Deploys to the ECS Cluster with zero-downtime rolling updates.
+4. Waits for Fargate service stability and prints the live ALB DNS URL.
+
+---
+
+## 🔑 GitHub Secrets Configuration
+
+Add these secrets under **Settings > Secrets and variables > Actions**:
+
+| Secret Name | Description |
+|---|---|
+| `DOCKERHUB_USERNAME` | Your Docker Hub Username |
+| `DOCKERHUB_TOKEN` | Your Docker Hub Personal Access Token (PAT) |
+| `AWS_ACCESS_KEY_ID` | AWS IAM Access Key ID for Terraform & ECS |
+| `AWS_SECRET_ACCESS_KEY` | AWS IAM Secret Access Key |
+| `AWS_REGION` | AWS Region (e.g. `us-east-1` or `eu-west-1`) |
 
 ---
 

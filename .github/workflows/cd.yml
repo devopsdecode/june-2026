@@ -1,0 +1,76 @@
+name: Continuous Deployment (AWS ECS Fargate)
+
+on:
+  workflow_run:
+    workflows: ["Fintech Job Portal CI/CD Pipeline"]
+    types:
+      - completed
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy to ECS'
+        required: false
+        default: 'latest'
+
+env:
+  AWS_REGION: 'us-east-1'
+  ECS_CLUSTER: 'fintech-job-portal-cluster'
+  ECS_SERVICE: 'fintech-job-portal-service'
+  ECS_TASK_DEFINITION: 'fintech-job-portal-task'
+  CONTAINER_NAME: 'fintech-job-portal'
+
+jobs:
+  deploy-to-ecs:
+    name: Deploy to ECS Fargate
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || env.AWS_REGION }}
+
+      - name: Fetch Latest Active ECS Task Definition
+        id: fetch-task-def
+        run: |
+          echo "Fetching latest task definition for family: $ECS_TASK_DEFINITION"
+          aws ecs describe-task-definition \
+            --task-definition $ECS_TASK_DEFINITION \
+            --query taskDefinition > task-definition.json
+
+      - name: Render New Image in Task Definition
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ secrets.DOCKERHUB_USERNAME }}/fintech-job-portal:${{ github.event.inputs.image_tag || 'latest' }}
+
+      - name: Deploy Updated Task Definition to AWS ECS Fargate
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Retrieve Public ALB DNS URL
+        run: |
+          ALB_ARN=$(aws elbv2 describe-load-balancers --names "fintech-job-portal-alb" --query "LoadBalancers[0].DNSName" --output text 2>/dev/null || echo "")
+          echo "======================================================="
+          echo "🚀 Deployment to AWS ECS Fargate Completed Successfully!"
+          if [ -n "$ALB_ARN" ]; then
+            echo "Access your live Fintech Job Portal at: http://$ALB_ARN"
+          else
+            echo "Service updated on ECS Cluster: $ECS_CLUSTER"
+          fi
+          echo "======================================================="
