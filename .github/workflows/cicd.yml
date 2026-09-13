@@ -107,8 +107,7 @@ jobs:
   docker-build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.event_name != 'pull_request'
+    needs: [build-and-test, package-and-publish]
 
     steps:
       - name: Checkout Source Code
