@@ -1,9 +1,7 @@
 name: Deploying application using Blue-Green Deployment
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   deploy-blue:
