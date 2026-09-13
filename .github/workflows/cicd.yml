@@ -102,13 +102,13 @@ jobs:
           retention-days: 14
 
   # ============================================================================
-  # Stage 3: Containerize & Push to Docker Hub
+  # Stage 3: Containerize & Push to Docker Hub (Using PAT and Username)
   # ============================================================================
   docker-build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name != 'pull_request'
 
     steps:
       - name: Checkout Source Code
@@ -124,7 +124,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME != '' && format('{0}/{1}', secrets.DOCKERHUB_USERNAME, env.IMAGE_NAME) || env.IMAGE_NAME }}
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
             type=sha,format=short,prefix=sha-
@@ -132,12 +132,11 @@ jobs:
             type=semver,pattern={{version}}
             type=raw,value=${{ github.event.inputs.image_tag }},enable=${{ github.event.inputs.image_tag != '' }}
 
-      - name: Log in to Docker Hub
-        if: ${{ secrets.DOCKERHUB_USERNAME != '' && (secrets.DOCKERHUB_TOKEN != '' || secrets.DOCKERHUB_PASSWORD != '') }}
+      - name: Log in to Docker Hub (PAT)
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build & Push Docker Image
         uses: docker/build-push-action@v5
@@ -145,16 +144,15 @@ jobs:
           context: .
           file: ./Dockerfile
           target: final
-          push: ${{ secrets.DOCKERHUB_USERNAME != '' && (secrets.DOCKERHUB_TOKEN != '' || secrets.DOCKERHUB_PASSWORD != '') && github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Docker Pipeline Status Summary
+      - name: Docker Deployment Summary
         run: |
           echo "======================================================="
-          echo "Docker Hub Deployment Summary:"
-          echo "Target Image: ${{ steps.meta.outputs.tags }}"
-          echo "Push Status: ${{ secrets.DOCKERHUB_USERNAME != '' && 'Pushed to Docker Hub' || 'Built locally (Docker Hub credentials not configured)' }}"
+          echo "Successfully pushed container image to Docker Hub!"
+          echo "Image Tags: ${{ steps.meta.outputs.tags }}"
           echo "======================================================="
