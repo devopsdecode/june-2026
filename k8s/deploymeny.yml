@@ -5,7 +5,7 @@ metadata:
   name: ns-june-deployment
   namespace: june-2026-ns
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       batch: june-2026
