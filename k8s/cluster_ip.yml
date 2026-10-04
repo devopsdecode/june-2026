@@ -1,0 +1,12 @@
+#akms
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-ip-service-june
+spec:
+  selector:
+    app: web
+  type: ClusterIP 
+  ports:
+    - port: 80
+      targetPort: 80
